@@ -17,16 +17,19 @@ def get_images(root_dir = "data/animal_thumbnails/land_mammals/cat", thumbnail_s
             with PIL.Image.open(file) as im:
                 #Create a downsampled image based on the thumbnail size
                 thumbnail = ImageOps.fit(im, thumbnail_size)
-                #Append thumbnail to the list of all the images
-                images.append(np.asarray(thumbnail))
+                thumbnail = np.asarray(thumbnail)
+                #Check not grayscale (only has 2 dimensions)
+                if len(thumbnail.shape) == 3:
+                    #Append thumbnail to the list of all the images
+                    #Drop any channels beyond rbg (e.g. Alpha for .png files)
+                    images.append(thumbnail[:,:,:3])
 
     print(f'There have been {len(images)} images found')
     #Convert list of images to a numpy array
     image_set_array = np.asarray(images)
-    image_set_array = image_set_array[:,:,:,:3]
     return image_set_array
 
-def generate_image_collage(target_image, image_set_array, downsample_rate, thumbnail_size):
+def generate_image_collage(target_image, image_set_array, downsample_rate, thumbnail_size, k = 40):
     #Convert PIL image object to numpy array
     target_im_np = np.asarray(target_image)
     
@@ -47,8 +50,8 @@ def generate_image_collage(target_image, image_set_array, downsample_rate, thumb
     for i in range(target_res[0]):
         for j in range(target_res[1]):
             template = mosaic_template[i, j]
-            match = tree.query(template, k=40)
-            pick = random.randint(0, 39)
+            match = tree.query(template, k=k)
+            pick = np.random.randint(0, k=1)
             image_idx[i, j] = match[1][pick]
     
     #Variable that can contail all the pixel values for the new image
@@ -57,8 +60,9 @@ def generate_image_collage(target_image, image_set_array, downsample_rate, thumb
     #Go through each pixel in the array of thumbnail<>pixel indexes and then assign all the pixels of the thumbnail into the final array
     for i in range(target_res[0]):
         for j in range(target_res[1]):
-            arr = image_set_array[image_idx[i, j],:,:,:]
-            x, y = i*thumbnail_size[0], j*thumbnail_size[1]
+            arr = image_set_array[image_idx[i, j]]
+            #Calculate the coordinate of where to paste in mosaic
+            x, y = i * thumbnail_size[0], j * thumbnail_size[1]
             im = PIL.Image.fromarray(arr)
             mosaic.paste(im, (x,y))
     
