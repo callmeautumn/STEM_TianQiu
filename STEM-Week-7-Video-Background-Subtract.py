@@ -1,4 +1,7 @@
 
+pip install opencv-python
+!pip install opencv-python
+
 
 import cv2
 from Animator import Animator
